@@ -76,6 +76,32 @@
         "heroImageUrl": { "type": "string" },
         "aboutImageUrl": { "type": "string" }
       }
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "Store operational schedule events",
+      "type": "object",
+      "properties": {
+        "date": { "type": "string", "description": "Date in YYYY-MM-DD format" },
+        "type": { "type": "string", "enum": ["open", "closed", "partial"], "description": "Operation status" },
+        "title": { "type": "string", "description": "Event title" },
+        "description": { "type": "string", "description": "Operation details" }
+      },
+      "required": ["date", "type", "title"]
+    },
+    "Notice": {
+      "title": "Notice",
+      "description": "Store announcement posts",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Notice title" },
+        "type": { "type": "string", "enum": ["NOTICE"], "description": "Notice category" },
+        "content": { "type": "string", "description": "Notice content body" },
+        "date": { "type": "string", "format": "date-time" },
+        "important": { "type": "boolean", "description": "Mark as important notice" },
+        "authorUid": { "type": "string" }
+      },
+      "required": ["title", "type", "content", "date", "important", "authorUid"]
     }
   },
   "firestore": {
@@ -102,6 +128,14 @@
     "/settings/app": {
       "schema": "Settings",
       "description": "Global application settings"
+    },
+    "/calendar_events/{eventId}": {
+      "schema": "CalendarEvent",
+      "description": "Operational calendar events"
+    },
+    "/notices/{noticeId}": {
+      "schema": "Notice",
+      "description": "Operation guide and announcements"
     }
   }
 }

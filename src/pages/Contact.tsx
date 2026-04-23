@@ -155,7 +155,7 @@ export default function Contact() {
               <section>
                 <div className="flex items-center gap-3 mb-10">
                   <div className="w-1.5 h-6 bg-brand-green rounded-full" />
-                  <h2 className="text-[24px] font-black text-slate-900 tracking-tight">상세한 요청사항을 적어주세요</h2>
+                  <h2 className="text-[24px] font-black text-slate-900 tracking-tight">문의내용을 적어주세요</h2>
                 </div>
                 <div className="bg-slate-50 border border-slate-100 rounded-[32px] p-6 focus-within:ring-2 focus-within:ring-brand-green transition-all shadow-inner">
                   <textarea 

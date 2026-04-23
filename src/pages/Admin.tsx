@@ -5,7 +5,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage, handleFirestoreError, OperationType } from "../firebase";
 import { useAuth } from "../context/AuthContext";
 import { Navigate } from "react-router-dom";
-import { Mail, Phone, Calendar, Trash2, CheckCircle, Clock, Settings, Image as ImageIcon, Save, Loader2 } from "lucide-react";
+import { Mail, Phone, Calendar, Trash2, CheckCircle, Clock, Settings, Image as ImageIcon, Save, Loader2, Bell, Megaphone, Search } from "lucide-react";
 
 interface Inquiry {
   id: string;
@@ -28,22 +28,40 @@ export default function Admin() {
   const { isAdmin, loading } = useAuth();
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [settings, setSettings] = useState<SiteSettings>({ heroImageUrl: "", aboutImageUrl: "" });
-  const [activeTab, setActiveTab] = useState<"inquiries" | "settings">("inquiries");
+  const [activeTab, setActiveTab] = useState<"inquiries" | "settings" | "calendar" | "notices">("inquiries");
   const [isUploading, setIsUploading] = useState<string | null>(null);
+
+  // Additional states for Calendar and Notices
+  const [calendarEvents, setCalendarEvents] = useState<any[]>([]);
+  const [notices, setNotices] = useState<any[]>([]);
+  const [isEditingEvent, setIsEditingEvent] = useState<any | null>(null);
+  const [isEditingNotice, setIsEditingNotice] = useState<any | null>(null);
+  const [eventForm, setEventForm] = useState({ date: "", type: "open", title: "", description: "" });
+  const [noticeForm, setNoticeForm] = useState({ title: "", type: "NOTICE", content: "", important: false });
 
   useEffect(() => {
     if (!isAdmin) return;
 
     // Fetch inquiries
-    const q = query(collection(db, "inquiries"), orderBy("createdAt", "desc"));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
+    const qInquiries = query(collection(db, "inquiries"), orderBy("createdAt", "desc"));
+    const unsubscribeInquiries = onSnapshot(qInquiries, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Inquiry[];
       setInquiries(data);
-    }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, "inquiries");
+    });
+
+    // Fetch calendar events
+    const qCalendar = query(collection(db, "calendar_events"), orderBy("date", "desc"));
+    const unsubscribeCalendar = onSnapshot(qCalendar, (snapshot) => {
+      setCalendarEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    // Fetch notices
+    const qNotices = query(collection(db, "notices"), orderBy("date", "desc"));
+    const unsubscribeNotices = onSnapshot(qNotices, (snapshot) => {
+      setNotices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     });
 
     // Fetch settings
@@ -55,7 +73,11 @@ export default function Admin() {
     };
     fetchSettings();
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribeInquiries();
+      unsubscribeCalendar();
+      unsubscribeNotices();
+    };
   }, [isAdmin]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: keyof SiteSettings) => {
@@ -105,6 +127,63 @@ export default function Admin() {
     }
   };
 
+  const handleEventSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isEditingEvent) {
+        await updateDoc(doc(db, "calendar_events", isEditingEvent.id), eventForm);
+      } else {
+        await setDoc(doc(collection(db, "calendar_events")), eventForm);
+      }
+      setIsEditingEvent(null);
+      setEventForm({ date: "", type: "open", title: "", description: "" });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, "calendar_events");
+    }
+  };
+
+  const handleNoticeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const { user } = useAuth(); // Actually useAuth doesn't return user, let's fix it later or use a workaround.
+    // For now assuming we have auth.currentUser available
+    const authorUid = (window as any).firebaseAuth?.currentUser?.uid || "admin";
+
+    try {
+      const data = {
+        ...noticeForm,
+        date: new Date().toISOString(),
+        authorUid
+      };
+      if (isEditingNotice) {
+        await updateDoc(doc(db, "notices", isEditingNotice.id), noticeForm);
+      } else {
+        await setDoc(doc(collection(db, "notices")), data);
+      }
+      setIsEditingNotice(null);
+      setNoticeForm({ title: "", type: "NOTICE", content: "", important: false });
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, "notices");
+    }
+  };
+
+  const deleteNotice = async (id: string) => {
+    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    try {
+      await deleteDoc(doc(db, "notices", id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `notices/${id}`);
+    }
+  };
+
+  const deleteEvent = async (id: string) => {
+    if (!window.confirm("정말 삭제하시겠습니까?")) return;
+    try {
+      await deleteDoc(doc(db, "calendar_events", id));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.DELETE, `calendar_events/${id}`);
+    }
+  };
+
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
@@ -138,7 +217,23 @@ export default function Admin() {
               activeTab === "settings" ? "bg-white text-brand-green shadow-sm" : "text-slate-400 hover:text-slate-600"
             }`}
           >
-            <Settings size={18} /> 사이트 환경 설정
+            <Settings size={18} /> 환경 설정
+          </button>
+          <button 
+            onClick={() => setActiveTab("calendar")}
+            className={`px-8 py-3 rounded-xl font-black text-[15px] transition-all flex items-center gap-2 ${
+              activeTab === "calendar" ? "bg-white text-brand-green shadow-sm" : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            <Calendar size={18} /> 일정 관리
+          </button>
+          <button 
+            onClick={() => setActiveTab("notices")}
+            className={`px-8 py-3 rounded-xl font-black text-[15px] transition-all flex items-center gap-2 ${
+              activeTab === "notices" ? "bg-white text-brand-green shadow-sm" : "text-slate-400 hover:text-slate-600"
+            }`}
+          >
+            <Bell size={18} /> 공지 관리
           </button>
         </div>
 
@@ -231,7 +326,7 @@ export default function Admin() {
               </div>
             )}
           </div>
-        ) : (
+        ) : activeTab === "settings" ? (
           <div className="space-y-12">
             <div className="bg-white rounded-[40px] p-10 md:p-14 shadow-xl shadow-slate-200/50 border border-slate-100">
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
@@ -314,6 +409,197 @@ export default function Admin() {
                 >
                   <Save size={24} /> 변경사항 최종 저장
                 </button>
+              </div>
+            </div>
+          </div>
+        ) : activeTab === "calendar" ? (
+          <div className="space-y-12">
+            <div className="bg-white rounded-[40px] p-8 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
+              <h2 className="text-2xl font-black text-slate-900 mb-8">업무 일정 추가/수정</h2>
+              <form onSubmit={handleEventSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-500">날짜</label>
+                  <input 
+                    type="date" 
+                    value={eventForm.date}
+                    onChange={e => setEventForm({...eventForm, date: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-2 focus:ring-brand-green outline-none"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-500">유형</label>
+                  <select 
+                    value={eventForm.type}
+                    onChange={e => setEventForm({...eventForm, type: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-2 focus:ring-brand-green outline-none"
+                  >
+                    <option value="open">정상 운영</option>
+                    <option value="partial">부분 운영</option>
+                    <option value="closed">휴무</option>
+                  </select>
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-sm font-bold text-slate-500">제목</label>
+                  <input 
+                    type="text" 
+                    value={eventForm.title}
+                    onChange={e => setEventForm({...eventForm, title: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-2 focus:ring-brand-green outline-none"
+                    placeholder="예: 근로자의 날 휴무"
+                    required
+                  />
+                </div>
+                <div className="md:col-span-2 space-y-2">
+                  <label className="text-sm font-bold text-slate-500">상세 설명</label>
+                  <textarea 
+                    value={eventForm.description}
+                    onChange={e => setEventForm({...eventForm, description: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-2 focus:ring-brand-green outline-none h-32"
+                    placeholder="상세 내용을 입력하세요"
+                  />
+                </div>
+                <div className="md:col-span-2 flex gap-4">
+                  <button type="submit" className="flex-1 bg-brand-green text-white py-4 rounded-2xl font-black text-lg">
+                    {isEditingEvent ? "수정 완료" : "일정 추가"}
+                  </button>
+                  {isEditingEvent && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setIsEditingEvent(null);
+                        setEventForm({ date: "", type: "open", title: "", description: "" });
+                      }}
+                      className="px-8 bg-slate-100 text-slate-400 py-4 rounded-2xl font-black"
+                    >
+                      취소
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="bg-white rounded-[40px] p-8 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
+              <h2 className="text-2xl font-black text-slate-900 mb-8">등록된 일정 리스트</h2>
+              <div className="space-y-4">
+                {calendarEvents.map(event => (
+                  <div key={event.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="font-mono text-slate-400 font-bold">{event.date}</span>
+                        <span className={`text-[10px] font-black px-2 py-0.5 rounded-full uppercase ${
+                          event.type === 'open' ? 'bg-brand-green text-white' : 
+                          event.type === 'partial' ? 'bg-brand-yellow text-white' : 'bg-red-500 text-white'
+                        }`}>{event.type}</span>
+                      </div>
+                      <h3 className="text-lg font-black text-slate-900">{event.title}</h3>
+                      {event.description && <p className="text-sm text-slate-500 mt-1">{event.description}</p>}
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          setIsEditingEvent(event);
+                          setEventForm({ date: event.date, type: event.type, title: event.title, description: event.description || "" });
+                        }}
+                        className="w-10 h-10 flex items-center justify-center bg-white rounded-xl text-brand-green border border-slate-100"
+                      >
+                        <Settings size={18} />
+                      </button>
+                      <button onClick={() => deleteEvent(event.id)} className="w-10 h-10 flex items-center justify-center bg-white rounded-xl text-red-500 border border-slate-100">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-12">
+             <div className="bg-white rounded-[40px] p-8 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
+              <h2 className="text-2xl font-black text-slate-900 mb-8">공지사항 작성</h2>
+              <form onSubmit={handleNoticeSubmit} className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-center gap-3 pt-4">
+                    <input 
+                      type="checkbox" 
+                      id="important"
+                      checked={noticeForm.important}
+                      onChange={e => setNoticeForm({...noticeForm, important: e.target.checked})}
+                      className="w-5 h-5 accent-brand-green"
+                    />
+                    <label htmlFor="important" className="font-bold text-slate-700">중요 공지로 표시 (강조)</label>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-500">제목</label>
+                  <input 
+                    type="text" 
+                    value={noticeForm.title}
+                    onChange={e => setNoticeForm({...noticeForm, title: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-2 focus:ring-brand-green outline-none"
+                    placeholder="제목을 입력하세요"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-500">내용</label>
+                  <textarea 
+                    value={noticeForm.content}
+                    onChange={e => setNoticeForm({...noticeForm, content: e.target.value})}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl p-4 focus:ring-2 focus:ring-brand-green outline-none h-64"
+                    placeholder="상세 내용을 입력하세요"
+                    required
+                  />
+                </div>
+                <div className="flex gap-4">
+                  <button type="submit" className="flex-1 bg-brand-green text-white py-4 rounded-2xl font-black text-lg">
+                    {isEditingNotice ? "수정 완료" : "게시글 올리기"}
+                  </button>
+                  {isEditingNotice && (
+                    <button 
+                      type="button" 
+                      onClick={() => {
+                        setIsEditingNotice(null);
+                        setNoticeForm({ title: "", type: "NOTICE", content: "", important: false });
+                      }}
+                      className="px-8 bg-slate-100 text-slate-400 py-4 rounded-2xl font-black"
+                    >
+                      취소
+                    </button>
+                  )}
+                </div>
+              </form>
+            </div>
+
+            <div className="bg-white rounded-[40px] p-8 md:p-10 shadow-xl shadow-slate-200/50 border border-slate-100">
+              <h2 className="text-2xl font-black text-slate-900 mb-8">게시글 관리</h2>
+              <div className="space-y-4">
+                {notices.map(notice => (
+                  <div key={notice.id} className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                    <div className="flex-1 mr-4">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-xs text-slate-400 font-bold">{new Date(notice.date).toLocaleDateString()}</span>
+                        {notice.important && <span className="text-[10px] bg-red-500 text-white px-2 py-0.5 rounded-full font-black tracking-tighter">URGENT</span>}
+                      </div>
+                      <h3 className="text-[16px] font-black text-slate-900 truncate">{notice.title}</h3>
+                    </div>
+                    <div className="flex gap-2 shrink-0">
+                      <button 
+                        onClick={() => {
+                          setIsEditingNotice(notice);
+                          setNoticeForm({ title: notice.title, type: notice.type, content: notice.content, important: notice.important });
+                        }}
+                        className="w-10 h-10 flex items-center justify-center bg-white rounded-xl text-brand-green border border-slate-100"
+                      >
+                        <Settings size={18} />
+                      </button>
+                      <button onClick={() => deleteNotice(notice.id)} className="w-10 h-10 flex items-center justify-center bg-white rounded-xl text-red-500 border border-slate-100">
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           </div>

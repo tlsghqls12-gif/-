@@ -54,6 +54,20 @@ service cloud.firestore {
              data.weight is string && data.weight.size() > 0 && data.weight.size() < 100;
     }
 
+    function isValidCalendarEvent(data) {
+      return data.date is string && data.date.size() == 10 &&
+             data.type in ['open', 'closed', 'partial'] &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100;
+    }
+
+    function isValidNotice(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.type in ['NOTICE'] &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.important is bool &&
+             data.authorUid == request.auth.uid;
+    }
+
     // Rules
     match /users/{userId} {
       allow read: if isAuthenticated();
@@ -83,6 +97,16 @@ service cloud.firestore {
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
+    }
+
+    match /calendar_events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidCalendarEvent(request.resource.data);
+    }
+
+    match /notices/{noticeId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidNotice(request.resource.data);
     }
   }
 }

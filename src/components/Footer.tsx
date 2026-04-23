@@ -13,14 +13,14 @@ export default function Footer() {
             </div>
             <div className="text-[14px] leading-relaxed space-y-1 font-medium">
               <p>사업장 소재지: 경남 김해시 전하로123번길 6-19</p>
-              <p>대표번호: {PHONE_NUMBER} | 개인정보관리책임자: 대표이사</p>
+              <p>대표번호: {PHONE_NUMBER} | 개인정보관리책임자: 대표 신호욱</p>
               <p className="pt-4 text-slate-500 font-mono text-[11px]">© 2024 Taeri Resources. 모든 권리는 당사에 있습니다.</p>
             </div>
           </div>
           
           <div className="flex flex-col items-start md:items-end gap-6 w-full md:w-auto">
             <div className="bg-white/5 backdrop-blur-md rounded-[32px] p-8 border border-white/5 w-full md:w-auto">
-              <p className="text-[12px] font-black text-brand-lime uppercase tracking-[0.2em] mb-2">Customer Center</p>
+              <p className="text-[12px] font-black text-brand-lime uppercase tracking-[0.2em] mb-2">직통</p>
               <a 
                 href={`tel:${PHONE_NUMBER}`} 
                 className="text-[28px] md:text-[36px] font-bold text-white hover:text-brand-lime transition-colors block leading-none"

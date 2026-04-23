@@ -1,5 +1,5 @@
 import { motion } from "motion/react";
-import { TrendingUp, Package, MapPin, ChevronRight, FileText, ShoppingBag, Truck, Info, Calendar, MessageSquare } from "lucide-react";
+import { TrendingUp, Package, MapPin, ChevronRight, FileText, ShoppingBag, Truck, Info, Calendar, MessageSquare, Clock } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { collection, onSnapshot, query, orderBy, limit, doc, getDoc } from "firebase/firestore";
@@ -89,9 +89,6 @@ export default function Home() {
               <Link to="/contact" className="bg-brand-green text-white px-8 py-4 rounded-full font-bold text-[17px] shadow-lg shadow-brand-green/20 hover:scale-105 transition-transform">
                 매입 상담하기
               </Link>
-              <Link to="/about" className="bg-white text-slate-700 border border-slate-200 px-8 py-4 rounded-full font-bold text-[17px] hover:bg-slate-50 transition-colors">
-                회사 소개
-              </Link>
             </div>
           </motion.div>
         </div>
@@ -119,9 +116,8 @@ export default function Home() {
             { icon: FileText, label: "시세정보", path: "/price" },
             { icon: ShoppingBag, label: "매입품목", path: "/items" },
             { icon: Truck, label: "매입현황", path: "/status" },
-            { icon: Info, label: "회사소개", path: "/about" },
             { icon: MessageSquare, label: "상담문의", path: "/contact" },
-            { icon: MapPin, label: "오시는길", path: "/contact" },
+            { icon: Clock, label: "운영안내", path: "/guide" },
           ].map((tile, i) => (
             <motion.div
               key={tile.label}
@@ -202,22 +198,26 @@ export default function Home() {
       <section className="bg-[#F2F8F0] py-24">
         <div className="container max-w-[1200px] mx-auto px-5">
           <motion.div {...fadeIn} className="text-center mb-16">
-            <h2 className="text-[36px] font-black text-slate-900 mb-4 tracking-tight">함께 만드는 자원 순환 교육</h2>
+            <h2 className="text-[36px] font-black text-slate-900 mb-4 tracking-tight">함께 만드는 자원 순환</h2>
             <p className="text-slate-500 font-medium">태리자원은 지역사회와 함께 환경을 생각합니다.</p>
           </motion.div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <motion.div {...fadeIn} className="bg-white rounded-[40px] p-8 shadow-xl shadow-green-900/5">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 bg-brand-lime rounded-full flex items-center justify-center text-white"><Calendar size={20} /></div>
-                <h3 className="text-xl font-bold text-slate-800">매장 운영 일정</h3>
-              </div>
-              <div className="grid grid-cols-7 gap-2">
+            <motion.div {...fadeIn} className="bg-white rounded-[40px] p-8 shadow-xl shadow-green-900/5 group">
+              <Link to="/guide/schedule">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-brand-lime rounded-full flex items-center justify-center text-white"><Calendar size={20} /></div>
+                    <h3 className="text-xl font-bold text-slate-800">매장 운영 일정</h3>
+                  </div>
+                  <ChevronRight size={20} className="text-slate-300 group-hover:text-brand-green transition-all" />
+                </div>
+                <div className="grid grid-cols-7 gap-2">
                 {['월','화','수','목','금','토','일'].map(d => (
                   <div key={d} className="text-center text-[13px] font-bold text-slate-400 py-2">{d}</div>
                 ))}
                 {Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className={`text-center p-3 rounded-2xl font-bold text-[16px] ${i === 3 ? 'bg-brand-lime text-white shadow-lg shadow-brand-lime/20' : 'hover:bg-slate-50 text-slate-700 cursor-pointer'}`}>
+                  <div key={i} className={`text-center p-3 rounded-2xl font-bold text-[16px] ${i === 3 ? 'bg-brand-lime text-white shadow-lg shadow-brand-lime/20' : 'group-hover:bg-slate-50 text-slate-700'}`}>
                     {23 + i}
                   </div>
                 ))}
@@ -225,29 +225,35 @@ export default function Home() {
               <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-center text-slate-400 text-sm font-medium">
                 환경보호 실천을 위해 주말은 일부 품목만 매입합니다.
               </div>
+              </Link>
             </motion.div>
 
-            <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="bg-white rounded-[40px] p-8 shadow-xl shadow-green-900/5">
-              <div className="flex items-center gap-3 mb-8">
-                <div className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white"><Info size={20} /></div>
-                <h3 className="text-xl font-bold text-slate-800">운영 안내 및 공지</h3>
-              </div>
-              <ul className="space-y-6">
-                {[
-                  "2024년 상반기 구리 단가 인상 안내",
-                  "신규 매입 장비 도입으로 인한 정밀 계량 실시",
-                  "지역사회 환경 교육 프로그램 참여 업체 선정",
-                  "추석 명절 기간 휴무 및 수납 안내"
-                ].map((notice, i) => (
-                  <li key={i} className="flex justify-between items-center group cursor-pointer">
-                    <span className="font-medium text-slate-600 group-hover:text-brand-green transition-colors line-clamp-1">· {notice}</span>
-                    <span className="text-[12px] text-slate-300 font-mono">2024.04.{20-i}</span>
-                  </li>
-                ))}
-              </ul>
-              <button className="w-full mt-8 py-3 bg-slate-50 rounded-2xl text-slate-500 font-bold text-[14px] hover:bg-slate-100 transition-colors">
-                상세 공지사항 확인하기
-              </button>
+            <motion.div {...fadeIn} transition={{ delay: 0.2 }} className="bg-white rounded-[40px] p-8 shadow-xl shadow-green-900/5 group">
+              <Link to="/guide/news">
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white"><Info size={20} /></div>
+                    <h3 className="text-xl font-bold text-slate-800">운영 안내 및 공지</h3>
+                  </div>
+                  <ChevronRight size={20} className="text-slate-300 group-hover:text-brand-green transition-all" />
+                </div>
+                <ul className="space-y-6">
+                  {[
+                    "2024년 상반기 구리 단가 인상 안내",
+                    "신규 매입 장비 도입으로 인한 정밀 계량 실시",
+                    "지역사회 환경 교육 프로그램 참여 업체 선정",
+                    "추석 명절 기간 휴무 및 수납 안내"
+                  ].map((notice, i) => (
+                    <li key={i} className="flex justify-between items-center">
+                      <span className="font-medium text-slate-600 group-hover:text-brand-green transition-colors line-clamp-1">· {notice}</span>
+                      <span className="text-[12px] text-slate-300 font-mono">2024.04.{20-i}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="w-full mt-8 py-3 bg-slate-50 rounded-2xl text-slate-500 font-bold text-[14px] group-hover:bg-slate-100 transition-colors text-center">
+                  상세 공지사항 확인하기
+                </div>
+              </Link>
             </motion.div>
           </div>
         </div>

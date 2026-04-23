@@ -10,6 +10,9 @@ import Items from "./pages/Items";
 import Contact from "./pages/Contact";
 import Admin from "./pages/Admin";
 import PurchaseStatus from "./pages/PurchaseStatus";
+import OperationGuide from "./pages/OperationGuide";
+import ScheduleCalendar from "./pages/ScheduleCalendar";
+import NoticeBoard from "./pages/NoticeBoard";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -35,6 +38,9 @@ export default function App() {
               <Route path="/contact" element={<Contact />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/status" element={<PurchaseStatus />} />
+              <Route path="/guide" element={<OperationGuide />} />
+              <Route path="/guide/schedule" element={<ScheduleCalendar />} />
+              <Route path="/guide/news" element={<NoticeBoard />} />
             </Routes>
           </div>
           <Footer />
