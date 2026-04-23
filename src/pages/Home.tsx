@@ -23,6 +23,8 @@ export default function Home() {
   const [statuses, setStatuses] = useState<PurchaseStatus[]>([]);
   const [prices, setPrices] = useState<PriceItem[]>([]);
   const [heroImage, setHeroImage] = useState("https://images.unsplash.com/photo-1518349619113-03114f06ac3a?q=80&w=2000&auto=format&fit=crop");
+  const [events, setEvents] = useState<any[]>([]);
+  const [notices, setNotices] = useState<any[]>([]);
 
   useEffect(() => {
     // Fetch settings
@@ -44,6 +46,18 @@ export default function Home() {
       setPrices(data);
     });
 
+    // Fetch notices
+    const nq = query(collection(db, "notices"), orderBy("date", "desc"), limit(4));
+    const unsubscribeNotices = onSnapshot(nq, (snapshot) => {
+      setNotices(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
+    // Fetch calendar events
+    const eq = query(collection(db, "calendar_events"));
+    const unsubscribeEvents = onSnapshot(eq, (snapshot) => {
+      setEvents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    });
+
     const q = query(collection(db, "purchase_status"), orderBy("createdAt", "desc"), limit(2));
     const unsubscribeStatuses = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map(doc => ({
@@ -52,11 +66,27 @@ export default function Home() {
       })) as PurchaseStatus[];
       setStatuses(data);
     });
+
     return () => {
       unsubscribePrices();
       unsubscribeStatuses();
+      unsubscribeNotices();
+      unsubscribeEvents();
     };
   }, []);
+
+  const getWeekDays = () => {
+    const today = new Date();
+    const day = today.getDay(); // 0 is Sunday
+    const diff = today.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    const monday = new Date(today.setDate(diff));
+    
+    return Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d;
+    });
+  };
 
   const fadeIn = {
     initial: { opacity: 0, y: 30 },
@@ -89,6 +119,9 @@ export default function Home() {
               <Link to="/contact" className="bg-brand-green text-white px-8 py-4 rounded-full font-bold text-[17px] shadow-lg shadow-brand-green/20 hover:scale-105 transition-transform">
                 매입 상담하기
               </Link>
+              <Link to="/about" className="bg-white text-slate-700 border border-slate-200 px-8 py-4 rounded-full font-bold text-[17px] hover:bg-slate-50 transition-colors">
+                회사 소개
+              </Link>
             </div>
           </motion.div>
         </div>
@@ -116,6 +149,7 @@ export default function Home() {
             { icon: FileText, label: "시세정보", path: "/price" },
             { icon: ShoppingBag, label: "매입품목", path: "/items" },
             { icon: Truck, label: "매입현황", path: "/status" },
+            { icon: Info, label: "회사소개", path: "/about" },
             { icon: MessageSquare, label: "상담문의", path: "/contact" },
             { icon: Clock, label: "운영안내", path: "/guide" },
           ].map((tile, i) => (
@@ -216,14 +250,28 @@ export default function Home() {
                 {['월','화','수','목','금','토','일'].map(d => (
                   <div key={d} className="text-center text-[13px] font-bold text-slate-400 py-2">{d}</div>
                 ))}
-                {Array.from({ length: 7 }).map((_, i) => (
-                  <div key={i} className={`text-center p-3 rounded-2xl font-bold text-[16px] ${i === 3 ? 'bg-brand-lime text-white shadow-lg shadow-brand-lime/20' : 'group-hover:bg-slate-50 text-slate-700'}`}>
-                    {23 + i}
-                  </div>
-                ))}
+                {getWeekDays().map((day, i) => {
+                  const dateStr = day.toISOString().split('T')[0];
+                  const event = events.find(e => e.date === dateStr);
+                  const isToday = new Date().toISOString().split('T')[0] === dateStr;
+                  
+                  return (
+                    <div key={i} className={`flex flex-col items-center p-2 rounded-2xl transition-all border ${
+                      isToday ? 'bg-brand-lime text-white border-brand-lime shadow-lg shadow-brand-lime/20' : 
+                      event?.type === 'closed' ? 'bg-red-50 border-red-100 text-red-500' :
+                      event?.type === 'partial' ? 'bg-amber-50 border-amber-100 text-amber-600' :
+                      'bg-slate-50 border-slate-50 text-slate-700'
+                    }`}>
+                      <span className="text-[14px] font-black">{day.getDate()}</span>
+                      {event && (
+                        <span className="text-[8px] font-bold mt-1 truncate w-full text-center">{event.title}</span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-center text-slate-400 text-sm font-medium">
-                환경보호 실천을 위해 주말은 일부 품목만 매입합니다.
+              <div className="mt-8 pt-8 border-t border-slate-100 flex items-center justify-center text-slate-400 text-xs font-medium text-center">
+                관리자가 등록한 실시간 운영 일정입니다.<br />방문 전 일정을 확인해 주세요.
               </div>
               </Link>
             </motion.div>
@@ -238,17 +286,20 @@ export default function Home() {
                   <ChevronRight size={20} className="text-slate-300 group-hover:text-brand-green transition-all" />
                 </div>
                 <ul className="space-y-6">
-                  {[
-                    "2024년 상반기 구리 단가 인상 안내",
-                    "신규 매입 장비 도입으로 인한 정밀 계량 실시",
-                    "지역사회 환경 교육 프로그램 참여 업체 선정",
-                    "추석 명절 기간 휴무 및 수납 안내"
-                  ].map((notice, i) => (
-                    <li key={i} className="flex justify-between items-center">
-                      <span className="font-medium text-slate-600 group-hover:text-brand-green transition-colors line-clamp-1">· {notice}</span>
-                      <span className="text-[12px] text-slate-300 font-mono">2024.04.{20-i}</span>
+                  {notices.map((notice) => (
+                    <li key={notice.id} className="flex justify-between items-center group/item hover:translate-x-1 transition-transform">
+                      <div className="flex items-center gap-2 overflow-hidden">
+                        {notice.important && <span className="w-1.5 h-1.5 bg-red-500 rounded-full shrink-0 animate-pulse" />}
+                        <span className="font-medium text-slate-600 group-hover:text-brand-green transition-colors line-clamp-1 text-[15px]">· {notice.title}</span>
+                      </div>
+                      <span className="text-[12px] text-slate-300 font-mono shrink-0 ml-4">{new Date(notice.date).toLocaleDateString()}</span>
                     </li>
                   ))}
+                  {notices.length === 0 && (
+                    <li className="text-center py-10 text-slate-300 font-bold italic">
+                      등록된 공지사항이 없습니다.
+                    </li>
+                  )}
                 </ul>
                 <div className="w-full mt-8 py-3 bg-slate-50 rounded-2xl text-slate-500 font-bold text-[14px] group-hover:bg-slate-100 transition-colors text-center">
                   상세 공지사항 확인하기
