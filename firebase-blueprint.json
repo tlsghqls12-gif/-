@@ -1,0 +1,107 @@
+{
+  "entities": {
+    "Price": {
+      "title": "Price",
+      "description": "Metal purchase prices",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Item name" },
+        "unit": { "type": "string", "description": "Unit (e.g., kg)" },
+        "price": { "type": "string", "description": "Price string" },
+        "category": { "type": "string", "enum": ["비철스크랩", "합금 / 특수금속", "고철 / 기타 스크랩"], "description": "Item category" },
+        "trend": { "type": "string", "enum": ["up", "down", "stable"], "description": "Price trend" },
+        "order": { "type": "number", "description": "Display order" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "unit", "price", "category", "trend", "order"]
+    },
+    "Item": {
+      "title": "Item",
+      "description": "Purchase items board posts",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Post title" },
+        "content": { "type": "string", "description": "Post content" },
+        "category": { "type": "string", "description": "Item category" },
+        "imageUrl": { "type": "string", "description": "Optional image URL" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "authorUid": { "type": "string" }
+      },
+      "required": ["title", "content", "category", "createdAt", "authorUid"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profiles and roles",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      },
+      "required": ["email", "role"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Customer purchase inquiries",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "itemName": { "type": "string" },
+        "weight": { "type": "string" },
+        "email": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["new", "read", "completed"] }
+      },
+      "required": ["name", "phone", "itemName", "weight", "createdAt"]
+    },
+    "PurchaseStatus": {
+      "title": "PurchaseStatus",
+      "description": "Real-time purchase status updates",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "location": { "type": "string" },
+        "date": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["title", "location", "createdAt"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "App-wide settings like hero and about images",
+      "type": "object",
+      "properties": {
+        "heroImageUrl": { "type": "string" },
+        "aboutImageUrl": { "type": "string" }
+      }
+    }
+  },
+  "firestore": {
+    "/prices/{priceId}": {
+      "schema": "Price",
+      "description": "Collection of metal prices"
+    },
+    "/items/{itemId}": {
+      "schema": "Item",
+      "description": "Collection of purchase items board posts"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Customer inquiries"
+    },
+    "/purchase_status/{statusId}": {
+      "schema": "PurchaseStatus",
+      "description": "Real-time purchase status"
+    },
+    "/settings/app": {
+      "schema": "Settings",
+      "description": "Global application settings"
+    }
+  }
+}
